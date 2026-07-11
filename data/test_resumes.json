@@ -1,0 +1,54 @@
+{
+  "description": "AI面试模拟官技能测试数据集。用于验证 diagnose / start / action / history 全链路功能。简历样本与 references/resume_samples.md 对应。",
+  "resumes": [
+    {
+      "id": "A",
+      "label": "产品经理（2年，数据驱动）",
+      "position": "产品经理",
+      "suggested_types": ["biz", "boss"],
+      "resume": "某电商互联网公司 产品经理（2年经验）。主导首页信息流推荐改版项目，负责需求分析、PRD撰写、跨研发/设计/运营推进落地。独立设计一次推荐策略A/B实验：对20%用户调整内容曝光频次，点击率提升12%、GMV提升3%。日常用SQL自助取数，每周输出数据周报。带过1名实习生完成竞品分析。熟悉Axure/Figma，擅长用户调研与需求优先级排序（RICE模型），对增长和留存有实操经验。"
+    },
+    {
+      "id": "B",
+      "label": "后端工程师（3年，高并发）",
+      "position": "后端工程师",
+      "suggested_types": ["biz", "stress"],
+      "resume": "后端工程师，3年经验。主导过电商订单系统高并发改造，用Redis做缓存、MySQL分库分表扛住大促峰值（峰值QPS 8万）。做过一次接口耗时优化，P99从800ms降到200ms。熟悉微服务（Spring Cloud）、消息队列（Kafka）。带过2人小组。"
+    },
+    {
+      "id": "C",
+      "label": "跨行转产品（营销背景，无产品经验）",
+      "position": "产品经理",
+      "suggested_types": ["hr"],
+      "resume": "5年互联网运营经验，做过学习打卡活动（付费转化率5%）、用户分层运营（按流失天数分群做差异化push，7日留存提升2个点）。做过一次竞品分析推动产品改版（客诉中30%归为界面问题，提给产品团队）。现在想转产品经理，正在自学Axure和SQL。"
+    },
+    {
+      "id": "D",
+      "label": "零实习应届生（仅校园项目，用于空简历分支对照）",
+      "position": "产品经理",
+      "suggested_types": ["hr"],
+      "resume": "某高校信息管理专业大四。校园项目「云餐厅」创业（已终止）：做过需求调研、用问卷收集200份反馈、设计食堂配送方案。熟悉Excel数据分析，正在学Python和SQL。学生会宣传部干事，负责公众号运营（粉丝3000+）。"
+    },
+    {
+      "id": "E",
+      "label": "空简历（<80字，走零经验应对策略分支）",
+      "position": "产品经理",
+      "suggested_types": ["hr"],
+      "resume": "应届生，想做产品经理，暂无实习经历。"
+    }
+  ],
+  "expected_output_format": {
+    "diagnose": "返回 diagnosis 文本：空简历(<80字)给「零经验应对策略」；非空给「弱点诊断」",
+    "start": "返回 session_id + message(开场第一问，不含[打分]) + weaknesses(空数组)",
+    "action_answer": "返回 round + message(含 [评价][打分]X/10[建议][弱点]标签1,标签2[下一题]) + weaknesses(标签数组)",
+    "action_end": "返回 finished:true + message(总评)",
+    "history": "返回 summary{total, top_weak[{tag,count,pct}], score_trend[]} + interviews[]"
+  },
+  "test_cases": [
+    {"case": "TC1", "resume_id": "A", "type": "biz", "steps": "diagnose→start→answer×3→end→history", "expect": "开场无分；每轮回答后有[打分]与弱点标签；history 出现1条记录，top_weak 非空"},
+    {"case": "TC2", "resume_id": "B", "type": "stress", "steps": "start→answer×2→end", "expect": "压力面语气冷淡、打分偏低(3-7)；弱点解析正常"},
+    {"case": "TC3", "resume_id": "C", "type": "hr", "steps": "diagnose→start", "expect": "diagnose 走非空弱点诊断分支；HR面温和"},
+    {"case": "TC4", "resume_id": "E", "type": "hr", "steps": "diagnose", "expect": "diagnose 走<80字零经验应对策略分支"},
+    {"case": "TC5", "resume_id": "A", "type": "biz", "steps": "连续跑3次→history", "expect": "history total=3，得分趋势3个色块，高频薄弱点 Top6 进度条"}
+  ]
+}
