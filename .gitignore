@@ -1,0 +1,19 @@
+# === 含真实 API Key 的运行副本（绝不入库，防止泄露）===
+interview_server.py
+interview_server_v2.2_stable.py
+interview_server_v2_backup.py
+interview_coach.py
+interview_coach_terminal.py
+
+# === 运行时 & 缓存 ===
+.workbuddy/
+__pycache__/
+*/__pycache__/
+*.pyc
+interview_history.json
+interview_history_*.json
+
+# === 旧版 / 无关文件 ===
+index.html
+test_data.json
+test_interview.py
