@@ -8,7 +8,7 @@
   - 白条根因 = preview 面板内置浏览器在 localhost 存凭据后弹自动填充，与页面代码无关
   - 演示时在自己本机 Chrome/Edge 地址栏开 localhost:8824（或无痕），即干净
 """
-import json, urllib.request, http.server, re, os, time, threading
+import json, urllib.request, http.server, re, os, time, threading, zipfile, xml.etree.ElementTree as ET
 
 API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")  # 也可直接填 "sk-你的key"；推荐用环境变量避免泄露
 API_URL = "https://api.deepseek.com/v1/chat/completions"
@@ -323,8 +323,8 @@ textarea{resize:vertical;min-height:130px}
   <div class="resume-row">
     <textarea id="resume" autocomplete="off" placeholder="粘贴简历，或点击右侧按钮上传 .txt / .md 文件…"></textarea>
     <div class="upload-col">
-      <input type="file" id="resume-file" accept=".txt,.md" onchange="uploadResume()" style="display:none">
-      <button class="btn btn-outline btn-sm" onclick="document.getElementById('resume-file').click()" title="上传简历文件">📁</button>
+      <input type="file" id="resume-file" accept=".txt,.md,.pdf,.docx" onchange="uploadResume()" style="display:none">
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('resume-file').click()" title="上传简历文件（.txt .md .pdf .docx）">📁</button>
       <span id="resume-file-name" style="font-size:10px;color:var(--sub);margin-top:3px;display:none;word-break:break-all"></span>
     </div>
   </div>
@@ -402,15 +402,21 @@ return fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body
 }
 function uploadResume(){
   var f=$('resume-file').files[0];if(!f)return;
-  var reader=new FileReader();
-  reader.onload=function(e){
-    $('resume').value=e.target.result;
-    var nm=$('resume-file-name');nm.textContent=f.name;nm.style.display='';
-  };
-  reader.onerror=function(){
-    alert('文件读取失败，请尝试粘贴文本或换 .txt 格式');
-  };
-  reader.readAsText(f,'UTF-8');
+  var ext=f.name.split('.').pop().toLowerCase();
+  var nm=$('resume-file-name');nm.textContent=f.name;nm.style.display='';
+  if(ext==='txt'||ext==='md'){
+    var reader=new FileReader();
+    reader.onload=function(e){$('resume').value=e.target.result;};
+    reader.onerror=function(){alert('文件读取失败');};
+    reader.readAsText(f,'UTF-8');
+  }else{
+    var fd=new FormData();fd.append('file',f);
+    nm.textContent=f.name+' (解析中…)';
+    fetch('/upload',{method:'POST',body:fd}).then(function(r){return r.json()}).then(function(d){
+      if(d.error){alert('解析失败：'+d.error);nm.textContent=f.name;}
+      else{$('resume').value=d.text;nm.textContent=f.name+' ✓ '+(d.length||d.text.length)+'字';}
+    }).catch(function(e){alert('上传失败：'+e.message);nm.textContent=f.name;});
+  }
 }
 async function startFlow(){
 var p=$('position').value.trim(),r=$('resume').value.trim();
@@ -600,6 +606,59 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape')hideHistory(
 </html>"""
 
 
+# ---------- 简历文件解析 ----------
+def extract_docx_text(data):
+    """从 .docx 二进制数据提取文本（零依赖，用 zipfile + ElementTree）"""
+    with zipfile.ZipFile(io.BytesIO(data)) as zf:
+        xml_content = zf.read("word/document.xml")
+    root = ET.fromstring(xml_content)
+    ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+    paragraphs = []
+    for p in root.iter("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}p"):
+        texts = []
+        for t in p.iter("{http://schemas.openxmlformats.org/wordprocessingml/2006/main}t"):
+            if t.text:
+                texts.append(t.text)
+        if texts:
+            paragraphs.append("".join(texts))
+    return "\n".join(paragraphs).strip()
+
+
+def extract_pdf_text(data):
+    """从 PDF 二进制数据提取文本（需 pip install PyPDF2）"""
+    import io as _io
+    from PyPDF2 import PdfReader
+    reader = PdfReader(_io.BytesIO(data))
+    text = []
+    for page in reader.pages:
+        t = page.extract_text()
+        if t:
+            text.append(t)
+    return "\n".join(text).strip()
+
+
+def parse_multipart(body_bytes, content_type):
+    """从 multipart/form-data 中提取文件名和文件内容"""
+    import email.parser as _ep
+    boundary = content_type.split("boundary=")[1].strip().strip('"')
+    # 用 email 模块解析 multipart
+    msg = _ep.BytesParser().parsebytes(
+        b"Content-Type: " + content_type.encode() + b"\r\n\r\n" + body_bytes
+    )
+    for part in msg.walk():
+        disp = part.get_content_disposition()
+        if disp == "attachment" or (part.get_filename() and disp == "form-data"):
+            fn = part.get_filename()
+            content = part.get_payload(decode=True)
+            if content and fn:
+                return fn, content
+    return None, None
+
+
+import io  # 供 extract_docx_text 使用
+
+
+# ============================================================
 class Handler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/":
@@ -617,7 +676,34 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     def do_POST(self):
         length = int(self.headers.get("Content-Length", 0))
-        body = json.loads(self.rfile.read(length).decode("utf-8"))
+        raw_data = self.rfile.read(length)
+
+        if self.path == "/upload":
+            ct = self.headers.get("Content-Type", "")
+            if "multipart/form-data" not in ct:
+                self.send_json({"error": "需要 multipart 上传"})
+                return
+            fn, content = parse_multipart(raw_data, ct)
+            if not fn or not content:
+                self.send_json({"error": "未能读取文件内容"})
+                return
+            ext = os.path.splitext(fn)[1].lower()
+            try:
+                if ext == ".docx":
+                    text = extract_docx_text(content)
+                elif ext == ".pdf":
+                    text = extract_pdf_text(content)
+                elif ext in (".txt", ".md"):
+                    text = content.decode("utf-8").strip()
+                else:
+                    self.send_json({"error": f"不支持的文件格式：{ext}"})
+                    return
+                self.send_json({"text": text, "filename": fn, "length": len(text)})
+            except Exception as e:
+                self.send_json({"error": f"文件解析失败：{str(e)}"})
+            return
+
+        body = json.loads(raw_data.decode("utf-8"))
 
         if self.path == "/diagnose":
             p = body.get("position", "").strip()

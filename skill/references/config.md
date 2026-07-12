@@ -2,6 +2,14 @@
 
 本工具调用 DeepSeek 的 `deepseek-chat` 模型做面试官。你需要一个 API Key（学生有免费额度，个人项目完全够用）。
 
+
+
+## 0. 可选依赖
+| 文件类型 | 依赖 | 说明 |
+|---------|------|------|
+| .txt / .md | 无 | 直接读取 |
+| .docx | 无 | 用 Python 标准库 zipfile + xml.etree 解析 |
+| .pdf | PyPDF2 | pip install PyPDF2；不传 PDF 则无需安装 |
 ## 1. 获取 Key
 
 1. 打开 https://platform.deepseek.com/
