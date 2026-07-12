@@ -148,87 +148,165 @@ def get_html():
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AI面试模拟官</title>
 <style>
-:root{--bg:#f8f9fa;--card-bg:#fff;--text:#1a1a2e;--sub:#6b7280;--border:#e5e7eb;--blue:#2563eb;--blue-light:#eff6ff;--green:#16a34a;--red:#dc2626;--orange:#ea580c;--radius:12px}
+:root{
+  --bg:#f4f5fb; --bg2:#eef0f8;
+  --card:#ffffff; --card2:#fbfbfe;
+  --text:#1d2130; --sub:#727a8e; --border:#e8eaf2;
+  --accent:#6366f1; --accent2:#8b5cf6; --accent-soft:#eef0ff;
+  --grad:linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%);
+  --ai-bg:#f4f2ff; --ai-border:#e6e1ff;
+  --user-bg:#ffffff;
+  --good:#16a34a; --warn:#f59e0b; --bad:#ef4444; --blue:#6366f1;
+  --radius:18px; --shadow:0 18px 40px -20px rgba(50,46,120,.28);
+}
+[data-theme="dark"]{
+  --bg:#0d0f16; --bg2:#11141d;
+  --card:#161a24; --card2:#1b202d;
+  --text:#e9ebf5; --sub:#949db3; --border:#262c3a;
+  --accent:#818cf8; --accent2:#a78bfa; --accent-soft:#1e2236;
+  --ai-bg:#1a1f33; --ai-border:#2d3354;
+  --user-bg:#1e2230;
+  --good:#22c55e; --warn:#fbbf24; --bad:#f87171; --blue:#818cf8;
+  --shadow:0 20px 44px -18px rgba(0,0,0,.7);
+}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh}
-.container{max-width:800px;margin:0 auto;padding:20px}
-.topbar{display:flex;justify-content:flex-end;margin-bottom:4px}
-header{text-align:center;padding:24px 0 8px}
-header h1{font-size:24px;font-weight:600}
-header p{font-size:14px;color:var(--sub);margin-top:4px}
-.card{background:var(--card-bg);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:16px}
-label{display:block;font-size:14px;font-weight:500;margin-bottom:6px}
-input,textarea,select{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;outline:none;autocomplete:off}
-input:focus,textarea:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
-textarea{resize:vertical;min-height:120px}
-.inline-row{display:flex;gap:12px;align-items:flex-end}.inline-row>div{flex:1}
-.btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 24px;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;border:none;transition:all .2s;font-family:inherit}
-.btn-primary{background:var(--blue);color:#fff}.btn-primary:hover{background:#1d4ed8}.btn-primary:disabled{opacity:.5;cursor:not-allowed}
-.btn-outline{background:var(--card-bg);border:1px solid var(--border);color:var(--text)}.btn-outline:hover{background:var(--bg)}
-.btn-sm{padding:6px 14px;font-size:13px}
-.chat-area{max-height:55vh;overflow-y:auto;padding:8px 0}
-.msg{margin-bottom:16px;animation:fadeIn .3s}
-.msg-ai .bubble{background:var(--blue-light);border:1px solid #bfdbfe;border-radius:var(--radius);padding:16px;font-size:14px;white-space:pre-wrap}
-.msg-user .bubble{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:14px;font-size:14px;margin-left:32px}
-.msg-ai .bubble:before{content:"面试官";display:block;font-size:12px;color:var(--blue);margin-bottom:4px;font-weight:500}
-.msg-user .bubble:before{content:"你";display:block;font-size:12px;color:var(--sub);margin-bottom:4px}
-.input-row{display:flex;gap:10px;margin-top:16px}.input-row textarea{flex:1;min-height:60px;padding:10px}
-.action-bar{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;justify-content:center}
-.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:500}
-.badge-g{background:#dcfce7;color:var(--green)}.badge-r{background:#fef2f2;color:var(--red)}
-.badge-o{background:#fff7ed;color:var(--orange)}.badge-b{background:var(--blue-light);color:var(--blue)}
-@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.spinner{display:inline-block;width:16px;height:16px;border:2px solid #e5e7eb;border-top-color:var(--blue);border-radius:50%;animation:spin .6s linear infinite;margin-right:8px;vertical-align:middle}
+html,body{height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Roboto,sans-serif;
+  background:radial-gradient(1200px 600px at 50% -10%,var(--bg2),var(--bg));
+  background-attachment:fixed;color:var(--text);line-height:1.65;min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+.container{max-width:820px;margin:0 auto;padding:22px 18px 60px}
+.topbar{display:flex;justify-content:flex-end;gap:10px;align-items:center;margin-bottom:6px}
+.icon-btn{width:38px;height:38px;border-radius:11px;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;font-size:16px;display:inline-flex;align-items:center;justify-content:center;transition:.2s}
+.icon-btn:hover{border-color:var(--accent);transform:translateY(-1px)}
+.hero{text-align:center;padding:26px 0 20px}
+.hero-badge{display:inline-block;padding:5px 14px;border-radius:999px;background:var(--accent-soft);color:var(--accent);font-size:12px;font-weight:600;letter-spacing:.5px;margin-bottom:14px}
+.hero h1{font-size:32px;font-weight:800;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:.5px}
+.hero p{color:var(--sub);margin-top:10px;font-size:14px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:26px;margin-bottom:18px;box-shadow:var(--shadow)}
+label{display:block;font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text)}
+input,textarea,select{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:12px;font-size:14px;font-family:inherit;outline:none;background:var(--card2);color:var(--text);transition:.18s}
+input::placeholder,textarea::placeholder{color:var(--sub);opacity:.8}
+input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft);background:var(--card)}
+textarea{resize:vertical;min-height:130px}
+.inline-row{display:flex;gap:14px;align-items:flex-end}.inline-row>div{flex:1}
+.gap{height:16px}
+.start-row{margin-top:18px;display:flex;justify-content:flex-end}
+.row-end{margin-top:18px;display:flex;gap:10px;justify-content:flex-end;align-items:center}
+.card-head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.card-head .dot{width:9px;height:9px;border-radius:50%;background:var(--grad);box-shadow:0 0 0 4px var(--accent-soft)}
+.card-head h3{font-size:17px;font-weight:700}
+.diag{font-size:14px;line-height:1.85;color:var(--text)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 22px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;border:1px solid transparent;transition:.2s;font-family:inherit}
+.btn-primary{background:var(--grad);color:#fff;box-shadow:0 10px 24px -10px rgba(99,102,241,.7)}
+.btn-primary:hover{filter:brightness(1.06);transform:translateY(-1px)}
+.btn-primary:disabled{opacity:.55;cursor:not-allowed;transform:none}
+.btn-outline{background:var(--card);border:1px solid var(--border);color:var(--text)}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent)}
+.btn-ghost{background:var(--card2);border:1px solid var(--border);color:var(--text)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
+.btn-danger{color:var(--bad)}.btn-danger:hover{border-color:var(--bad);color:var(--bad)}
+.btn-sm{padding:8px 14px;font-size:13px}
+.iv-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:10px;flex-wrap:wrap}
+.iv-tags{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.round-info{font-size:12.5px;color:var(--sub);font-weight:600;white-space:nowrap}
+.badge{display:inline-block;padding:4px 11px;border-radius:999px;font-size:12px;font-weight:600}
+.badge-b{background:var(--accent-soft);color:var(--accent)}
+.badge-focus{background:linear-gradient(135deg,#fef3c7,#fde68a);color:#92400e;box-shadow:0 0 0 3px rgba(251,191,36,.18);animation:pulse 2.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 3px rgba(251,191,36,.18)}50%{box-shadow:0 0 0 6px rgba(251,191,36,.05)}}
+.progress{height:6px;background:var(--bg2);border-radius:999px;overflow:hidden;margin-bottom:16px}
+.progress-fill{height:100%;width:10%;background:var(--grad);border-radius:999px;transition:width .4s ease}
+.chat-area{max-height:56vh;overflow-y:auto;padding:6px 2px 4px}
+.msg{display:flex;gap:12px;margin-bottom:20px;animation:rise .35s ease both}
+.msg-user{flex-direction:row-reverse}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.avatar.ai{background:var(--grad);color:#fff;box-shadow:0 6px 16px -6px rgba(99,102,241,.6)}
+.avatar.me{background:var(--card2);border:1px solid var(--border);color:var(--sub);font-size:13px;font-weight:600}
+.msg-body{max-width:80%}
+.bubble{background:var(--ai-bg);border:1px solid var(--ai-border);border-radius:16px;border-top-left-radius:5px;padding:14px 17px;font-size:14px;line-height:1.8;white-space:pre-wrap;word-break:break-word}
+.msg-user .bubble{background:var(--user-bg);border:1px solid var(--border);border-top-right-radius:5px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.tag{display:inline-block;padding:3px 10px;border-radius:8px;font-size:12px;font-weight:600}
+.tag-good{background:#dcfce7;color:var(--good)}
+.tag-warn{background:#fef3c7;color:#b45309}
+.tag-blue{background:var(--accent-soft);color:var(--accent)}
+.tag-bad{background:#fee2e2;color:var(--bad)}
+.input-row{display:flex;gap:12px;margin-top:8px;align-items:flex-end}
+.input-row textarea{flex:1;min-height:64px;padding:12px}
+.action-bar{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;justify-content:center}
+.spinner{display:inline-block;width:15px;height:15px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;margin-right:8px;vertical-align:middle}
 @keyframes spin{to{transform:rotate(360deg)}}
 .hidden{display:none!important}
-.modal{position:fixed;inset:0;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
-.modal-box{background:#fff;border-radius:14px;padding:24px;max-width:680px;width:100%;max-height:84vh;overflow:auto}
-.modal-box h3{font-size:18px;font-weight:600}
-.modal-box h4{font-size:14px;font-weight:600;margin:14px 0 8px;color:var(--text)}
-.weak-bar{height:6px;background:#eef2f7;border-radius:4px;margin-top:4px;overflow:hidden}
-.weak-bar>div{height:100%;background:var(--red);border-radius:4px}
-.hist-card{border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px}
-.score-pill{color:#fff;padding:3px 10px;border-radius:6px;font-size:13px;font-weight:600}
-.warn-box{margin-top:14px;padding:12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;font-size:13px;color:#9a3412;line-height:1.7}
+.modal{position:fixed;inset:0;background:rgba(15,20,35,.5);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
+.modal-box{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:26px;max-width:680px;width:100%;max-height:86vh;overflow:auto;box-shadow:var(--shadow);animation:rise .3s ease both}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.modal-box h3{font-size:18px;font-weight:700}
+.modal-box h4{font-size:14px;font-weight:700;margin:18px 0 10px;color:var(--text)}
+.weak-bar{height:7px;background:var(--bg2);border-radius:999px;margin-top:5px;overflow:hidden}
+.weak-bar>div{height:100%;background:linear-gradient(90deg,var(--bad),#fb923c);border-radius:999px}
+.hist-card{border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;background:var(--card2)}
+.score-pill{color:#fff;padding:4px 11px;border-radius:9px;font-size:13px;font-weight:700}
+.warn-box{margin-top:16px;padding:14px 16px;background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fde68a;border-radius:14px;font-size:13.5px;color:#92400e;line-height:1.8}
+@media(max-width:560px){.inline-row{flex-direction:column;gap:14px}.hero h1{font-size:26px}.msg-body{max-width:86%}}
 </style>
 </head>
-<body>
+<body data-theme="light">
 <div class="container">
-<div class="topbar"><button class="btn btn-outline btn-sm" onclick="showHistory()">📊 面试历史</button></div>
-<header>
-<h1>AI面试模拟官</h1>
-<p>多类型面试 · 简历诊断 · 追问控制 · 成长追踪</p>
+<div class="topbar">
+  <button class="icon-btn" id="theme-toggle" onclick="toggleTheme()" title="切换深浅色">🌙</button>
+  <button class="btn btn-outline btn-sm" onclick="showHistory()">📊 历史</button>
+</div>
+
+<header class="hero">
+  <div class="hero-badge">AI · 面试教练</div>
+  <h1>AI 面试模拟官</h1>
+  <p>多类型面试官 · 简历诊断 · 弱点追踪 · 针对性加练</p>
 </header>
 
 <div id="setup-card" class="card">
-<div class="inline-row">
-<div><label>目标岗位</label><input id="position" autocomplete="off" placeholder="如：产品经理..."></div>
-<div><label>面试类型</label><select id="interviewType"><option value="biz">业务面</option><option value="hr">HR面</option><option value="boss">总监面</option><option value="stress">压力面</option></select></div>
-</div>
-<div style="height:12px"></div>
-<label>粘贴简历</label><textarea id="resume" autocomplete="off" placeholder="把你的简历粘贴到这里..."></textarea>
-<div style="margin-top:16px"><button id="start-btn" class="btn btn-primary" onclick="startFlow()">诊断简历，开始面试</button></div>
+  <div class="inline-row">
+    <div><label>目标岗位</label><input id="position" autocomplete="off" placeholder="如：产品经理 / 后端工程师 ..."></div>
+    <div><label>面试类型</label><select id="interviewType"><option value="biz">业务面 · 深挖项目</option><option value="hr">HR面 · 软素质</option><option value="boss">总监面 · 战略思维</option><option value="stress">压力面 · 高压追问</option></select></div>
+  </div>
+  <div class="gap"></div>
+  <label>粘贴简历</label><textarea id="resume" autocomplete="off" placeholder="把你的简历粘贴到这里，AI 会据此出题与诊断 ..."></textarea>
+  <div class="start-row"><button id="start-btn" class="btn btn-primary" onclick="startFlow()">诊断简历，开始面试 →</button></div>
 </div>
 
 <div id="diagnosis-card" class="card hidden">
-<h3 style="margin-bottom:12px">简历分析</h3><div id="diag-content" style="font-size:14px;line-height:1.8"></div>
-<div style="margin-top:16px"><button class="btn btn-primary" onclick="confirmStart()">开始面试</button><button class="btn btn-outline btn-sm" style="margin-left:8px" onclick="backToSetup()">返回修改</button></div>
+  <div class="card-head"><span class="dot"></span><h3>简历分析</h3></div>
+  <div id="diag-content" class="diag"></div>
+  <div class="row-end">
+    <button class="btn btn-primary" onclick="confirmStart()">开始面试</button>
+    <button class="btn btn-outline btn-sm" onclick="backToSetup()">返回修改</button>
+  </div>
 </div>
 
 <div id="interview-card" class="card hidden">
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-<span id="type-badge" class="badge badge-b">业务面</span><span id="focus-badge" class="badge badge-r" style="display:none"></span><span style="font-size:12px;color:var(--sub)" id="round-info"></span></div>
-<div class="chat-area" id="chat"></div>
-<div id="input-area">
-<div class="input-row"><textarea id="answer" autocomplete="off" placeholder="输入你的回答...（Ctrl+Enter 或点「发送回答」）" onkeydown="if(event.ctrlKey&&event.key==='Enter')doAction('answer')"></textarea>
-<button id="send-btn" class="btn btn-primary" style="align-self:flex-end;white-space:nowrap" onclick="doAction('answer')">📤 发送回答</button></div>
-<div class="action-bar" style="margin-top:12px">
-<button class="btn btn-outline btn-sm" onclick="doAction('deep')">深挖追问</button>
-<button class="btn btn-outline btn-sm" onclick="doAction('switch')">换方向</button>
-<button class="btn btn-outline btn-sm" onclick="doAction('skip')">跳过</button>
-<button class="btn btn-outline btn-sm" style="color:var(--red);border-color:#fecaca" onclick="doAction('end')">结束面试</button>
-</div>
-</div>
+  <div class="iv-top">
+    <div class="iv-tags">
+      <span id="type-badge" class="badge badge-b">业务面</span>
+      <span id="focus-badge" class="badge badge-focus" style="display:none"></span>
+    </div>
+    <span id="round-info" class="round-info">第 1 轮</span>
+  </div>
+  <div class="progress"><div class="progress-fill" id="round-progress-fill"></div></div>
+  <div class="chat-area" id="chat"></div>
+  <div id="input-area">
+    <div class="input-row">
+      <textarea id="answer" autocomplete="off" placeholder="输入你的回答…（Ctrl+Enter 发送）" onkeydown="if(event.ctrlKey&&event.key==='Enter')doAction('answer')"></textarea>
+      <button id="send-btn" class="btn btn-primary" onclick="doAction('answer')">📤 发送</button>
+    </div>
+    <div class="action-bar">
+      <button class="btn btn-ghost btn-sm" onclick="doAction('deep')">🔍 深挖追问</button>
+      <button class="btn btn-ghost btn-sm" onclick="doAction('switch')">🔃 换方向</button>
+      <button class="btn btn-ghost btn-sm" onclick="doAction('skip')">⏭ 跳过</button>
+      <button class="btn btn-ghost btn-sm btn-danger" onclick="doAction('end')">⏹ 结束</button>
+    </div>
+  </div>
 </div>
 
 <div id="summary-card" class="card hidden"></div>
@@ -236,8 +314,8 @@ textarea{resize:vertical;min-height:120px}
 
 <div id="history-modal" class="modal hidden" onclick="if(event.target===this)hideHistory()">
 <div class="modal-box">
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-<h3>面试历史</h3><button class="btn btn-outline btn-sm" onclick="event.stopPropagation();hideHistory()">✕ 关闭</button>
+<div class="modal-head">
+  <h3>面试历史</h3><button class="icon-btn" onclick="event.stopPropagation();hideHistory()">✕</button>
 </div>
 <div id="history-content"></div>
 </div>
@@ -250,16 +328,14 @@ function typeName(t){return {biz:'业务面',hr:'HR面',boss:'总监面',stress:
 function addMsg(role,text,weakArr){
 var d=document.createElement('div');d.className='msg msg-'+role;
 var t=text.replace(/\\n/g,'<br>');
-t=t.replace(/\\[评价\\]/g,'<span class="badge badge-g">评价</span> ');
-t=t.replace(/\\[打分\\]\\s*(\\d+)\\/10/g,'<span class="badge badge-o">$1/10</span>');
-t=t.replace(/\\[建议\\]/g,'<span class="badge badge-b">建议</span> ');
-t=t.replace(/\\[下一题\\]/g,'<span class="badge badge-b">下一题</span>');
-d.innerHTML='<div class="bubble">'+t+'</div>';
-if(weakArr&&weakArr.length){
-  var chip=document.createElement('div');chip.style.marginTop='8px';
-  weakArr.forEach(function(w){chip.innerHTML+='<span class="badge badge-r" style="margin-right:6px">'+w+'</span>';});
-  d.querySelector('.bubble').appendChild(chip);
-}
+t=t.replace(/\\[评价\\]/g,'<span class="tag tag-good">评价</span> ');
+t=t.replace(/\\[打分\\]\\s*(\\d+(?:\\.\\d+)?)\\/10/g,'<span class="tag tag-warn">$1/10</span>');
+t=t.replace(/\\[建议\\]/g,'<span class="tag tag-blue">建议</span> ');
+t=t.replace(/\\[下一题\\]/g,'<span class="tag tag-blue">下一题</span>');
+var av=role==='ai'?'<div class="avatar ai">🎯</div>':'<div class="avatar me">你</div>';
+var inner='<div class="bubble">'+t+'</div>';
+if(weakArr&&weakArr.length){var chips='<div class="chips">';weakArr.forEach(function(w){chips+='<span class="tag tag-bad">'+w+'</span>';});chips+='</div>';inner+=chips;}
+d.innerHTML=av+'<div class="msg-body">'+inner+'</div>';
 $('chat').appendChild(d);$('chat').scrollTop=$('chat').scrollHeight;
 }
 function btnSpin(el,loading){
@@ -295,7 +371,7 @@ if(d.summary&&d.summary.top_weak&&d.summary.top_weak.length){
 }
 async function confirmStart(){
 var p=$('position').value.trim(),r=$('resume').value.trim(),t=$('interviewType').value;
-typeLabel=$('interviewType').selectedOptions[0].text;
+typeLabel=typeName(t);
 $('diagnosis-card').classList.add('hidden');
 $('interview-card').classList.remove('hidden');
 $('type-badge').textContent=typeLabel;
@@ -304,7 +380,7 @@ try{
 var d=await api('/start',{position:p,resume:r,type:t});
 removeThinking();
 if(d.error){addMsg('ai','[系统] '+d.error);}
-else{sessionId=d.session_id;addMsg('ai',d.message,d.weaknesses);$('round-info').textContent='第1轮';
+else{sessionId=d.session_id;addMsg('ai',d.message,d.weaknesses);$('round-info').textContent='第 1 轮';updateProgress(1);
 if(d.focus){$('focus-badge').style.display='';$('focus-badge').textContent='🎯 针对性加练：'+d.focus;}else{$('focus-badge').style.display='none';}}
 }catch(e){removeThinking();addMsg('ai','[系统] 出错: '+e.message)}
 isWaiting=0;$('answer').focus();
@@ -323,16 +399,16 @@ var d=await api('/action',{session_id:sessionId,action:action,answer:ans});
 removeThinking();
 if(d.error){addMsg('ai','[系统] '+d.error);}
 else if(d.finished){addMsg('ai',d.message);showSummary(d.message);$('input-area').classList.add('hidden')}
-else{addMsg('ai',d.message,d.weaknesses);$('round-info').textContent='第'+d.round+'/10轮'}
+else{addMsg('ai',d.message,d.weaknesses);$('round-info').textContent='第 '+d.round+' / 10 轮';updateProgress(d.round);}
 }catch(e){removeThinking();addMsg('ai','[系统] 网络出错: '+e.message)}
 isWaiting=0;setWaiting(false);if(action!=='end')$('answer').focus();
 }
-function setWaiting(on){var b=$('send-btn');if(b){b.disabled=on;b.innerHTML=on?'<span class="spinner"></span> 思考中…':'📤 发送回答'}}
-function showThinking(){if($('thinking'))return;var d=document.createElement('div');d.className='msg msg-ai';d.id='thinking';d.innerHTML='<div class="bubble"><span class="spinner"></span> 面试官正在思考…</div>';$('chat').appendChild(d);$('chat').scrollTop=$('chat').scrollHeight;}
+function setWaiting(on){var b=$('send-btn');if(b){b.disabled=on;b.innerHTML=on?'<span class="spinner"></span> 思考中…':'📤 发送'}}
+function showThinking(){if($('thinking'))return;var d=document.createElement('div');d.className='msg msg-ai';d.id='thinking';d.innerHTML='<div class="avatar ai">🎯</div><div class="msg-body"><div class="bubble"><span class="spinner"></span> 面试官正在思考…</div></div>';$('chat').appendChild(d);$('chat').scrollTop=$('chat').scrollHeight;}
 function removeThinking(){var t=$('thinking');if(t)t.remove();}
 function showSummary(text){
 var c=$('summary-card');c.classList.remove('hidden');
-c.innerHTML='<h3 style="margin-bottom:12px">面试总评</h3><div style="font-size:14px;white-space:pre-wrap">'+text+'</div><div style="margin-top:16px"><button class="btn btn-primary" onclick="location.reload()">再来一次</button></div>';
+c.innerHTML='<div class="card-head"><span class="dot"></span><h3>面试总评</h3></div><div style="font-size:14px;white-space:pre-wrap;line-height:1.85">'+text+'</div><div style="margin-top:18px;display:flex;gap:10px"><button class="btn btn-primary" onclick="location.reload()">再来一次</button></div>';
 }
 async function showHistory(){
 try{
@@ -362,7 +438,7 @@ if(d.interviews&&d.interviews.length){
     html+='<div style="font-size:12px;color:var(--sub);margin:4px 0">'+iv.date+' · '+iv.rounds+'轮</div>';
     if(iv.weaknesses&&iv.weaknesses.length){
       html+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
-      iv.weaknesses.forEach(function(w){html+='<span class="badge badge-r">'+w+'</span>';});
+      iv.weaknesses.forEach(function(w){html+='<span class="tag tag-bad">'+w+'</span>';});
       html+='</div>';
     }
     html+='</div>';
@@ -375,6 +451,9 @@ $('history-modal').classList.remove('hidden');
 }catch(e){alert('读取历史失败: '+e.message)}
 }
 function hideHistory(){$('history-modal').classList.add('hidden')}
+function updateProgress(round){var f=$('round-progress-fill');if(f)f.style.width=Math.min(round,10)/10*100+'%';}
+function toggleTheme(){var b=document.body;var dark=b.dataset.theme==='dark';var next=dark?'light':'dark';b.dataset.theme=next;try{localStorage.setItem('iv-theme',next)}catch(e){}var btn=$('theme-toggle');if(btn)btn.textContent=next==='dark'?'☀️':'🌙';}
+(function(){try{var t=localStorage.getItem('iv-theme');if(t){document.body.dataset.theme=t;var b=$('theme-toggle');if(b)b.textContent=t==='dark'?'☀️':'🌙';}}catch(e){}})();
 document.addEventListener('keydown',function(e){if(e.key==='Escape')hideHistory()})
 </script>
 </body>
