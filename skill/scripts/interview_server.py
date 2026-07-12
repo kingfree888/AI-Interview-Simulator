@@ -71,9 +71,11 @@ def call_deepseek(messages):
 def parse_reply(reply):
     """解析 [打分] 和 [弱点]。返回 (分数, 展示文本, 弱点列表)。[弱点] 段从展示文本剥离。"""
     score = None
-    m = re.search(r"\[打分\]\s*(\d+)\s*/\s*10", reply)
+    m = re.search(r"\[打分\]\s*(\d+(?:\.\d+)?)\s*/\s*(10|100)", reply)
     if m:
-        score = int(m.group(1))
+        num = float(m.group(1))
+        den = int(m.group(2))
+        score = round(num / den * 10, 1) if den == 100 else round(num, 1)
     weak = []
     wm = re.search(r"\[弱点\]\s*([^\n\[]*)", reply)
     if wm:
@@ -215,7 +217,7 @@ textarea{resize:vertical;min-height:120px}
 
 <div id="interview-card" class="card hidden">
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-<span id="type-badge" class="badge badge-b">业务面</span><span style="font-size:12px;color:var(--sub)" id="round-info"></span></div>
+<span id="type-badge" class="badge badge-b">业务面</span><span id="focus-badge" class="badge badge-r" style="display:none"></span><span style="font-size:12px;color:var(--sub)" id="round-info"></span></div>
 <div class="chat-area" id="chat"></div>
 <div id="input-area">
 <div class="input-row"><textarea id="answer" autocomplete="off" placeholder="输入你的回答...（Ctrl+Enter 或点「发送回答」）" onkeydown="if(event.ctrlKey&&event.key==='Enter')doAction('answer')"></textarea>
@@ -302,7 +304,8 @@ try{
 var d=await api('/start',{position:p,resume:r,type:t});
 removeThinking();
 if(d.error){addMsg('ai','[系统] '+d.error);}
-else{sessionId=d.session_id;addMsg('ai',d.message,d.weaknesses);$('round-info').textContent='第1轮';}
+else{sessionId=d.session_id;addMsg('ai',d.message,d.weaknesses);$('round-info').textContent='第1轮';
+if(d.focus){$('focus-badge').style.display='';$('focus-badge').textContent='🎯 针对性加练：'+d.focus;}else{$('focus-badge').style.display='none';}}
 }catch(e){removeThinking();addMsg('ai','[系统] 出错: '+e.message)}
 isWaiting=0;$('answer').focus();
 }
@@ -424,6 +427,21 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 return
             sid = str(len(conversations))
             sp = TYPE_PROMPTS[t]["style"].format(position=p, resume=r)
+            # 迭代3：弱点自适应闭环——读取历史高频薄弱点，注入面试官 prompt
+            focus = ""
+            try:
+                hist = load_history()
+                summ = get_weakness_summary(hist)
+                if summ["total"] > 0 and summ["top_weak"]:
+                    top_tags = [w["tag"] for w in summ["top_weak"][:3]]
+                    focus = "、".join(top_tags)
+                    sp += ("\n【针对性加练】该候选人此前已完成 " + str(summ["total"]) +
+                           " 次模拟面试，历史高频薄弱点为：" + focus +
+                           "。请在本次面试中有意识地围绕这些方向出题，并在开场第一问就点出其中一个方向"
+                           "（例如：『我注意到你之前几次面试在X上偏弱，我们先从这块聊』）。"
+                           "注意：开场第一问仍只问一题、不评价、不打分、不写任何方括号标记。")
+            except Exception:
+                focus = ""
             msgs = [{"role": "system", "content": sp}]
             try:
                 first = call_deepseek(msgs)
@@ -436,7 +454,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                                   "messages": msgs, "round": 0,
                                   "scores": [sc] if sc else [],
                                   "weaknesses": weak, "summary": "", "finished": False}
-            self.send_json({"session_id": sid, "message": disp, "weaknesses": weak, "type_label": TYPE_PROMPTS[t]["label"]})
+            self.send_json({"session_id": sid, "message": disp, "weaknesses": weak, "type_label": TYPE_PROMPTS[t]["label"], "focus": focus})
 
         elif self.path == "/action":
             sid = body.get("session_id", "")
