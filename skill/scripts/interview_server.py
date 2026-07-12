@@ -58,6 +58,8 @@ def normalize_weak(raw):
 
 
 def call_deepseek(messages):
+    if not API_KEY:
+        raise RuntimeError("未配置 API Key：请设置环境变量 DEEPSEEK_API_KEY，或把代码里的 API_KEY 直接填成你的 sk- 开头密钥")
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {API_KEY}"}
     payload = {"model": MODEL, "messages": messages, "temperature": 0.6}
     req = urllib.request.Request(API_URL, data=json.dumps(payload).encode("utf-8"), headers=headers)
@@ -351,11 +353,13 @@ if(!p||!r){alert('请填写岗位和简历');return;}
 var btn=$('start-btn');btnSpin(btn,true);
 try{
 var d=await api('/diagnose',{position:p,resume:r});
+if(d.error){alert('诊断失败：'+d.error);return;}
+if(!d.diagnosis){alert('诊断失败：服务端未返回内容，请重试');return;}
 $('diag-content').innerHTML=d.diagnosis.replace(/\\n/g,'<br>');
 await showWeakWarning();
 $('setup-card').classList.add('hidden');
 $('diagnosis-card').classList.remove('hidden');
-}catch(e){alert('诊断出错: '+e.message)}
+}catch(e){alert('诊断出错：'+e.message)}
 btnSpin(btn,false);
 }
 function backToSetup(){$('diagnosis-card').classList.add('hidden');$('setup-card').classList.remove('hidden')}
