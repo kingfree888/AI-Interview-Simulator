@@ -90,23 +90,46 @@ def parse_reply(reply):
 
 
 def parse_dimensions(reply):
-    """解析 [维度] 标记，返回 (维度字典, 干净文本)"""
-    dims = {}
-    dm = re.search(r"\[维度\]\s*([^\n\[]*)", reply)
-    if dm:
-        raw = dm.group(1)
-        for part in re.split(r"[,，]", raw):
-            kv = part.split(":", 1)
-            if len(kv) == 2:
-                key = kv[0].strip()
-                try:
-                    val = int(kv[1].strip())
-                    dims[key] = min(max(val, 1), 10)
-                except ValueError:
-                    pass
-    clean = re.sub(r"\[维度\][^\n\[]*", "", reply).strip()
-    return dims, clean
+    """解析 [维度] 标记，返回 (维度字典, 干净文本)。JSON 优先（含换行），缺省补 5 分。"""
+    default_keys = ["逻辑结构", "表达沟通", "业务深度", "方法论", "应变能力"]
+    dims = {k: 5 for k in default_keys}
+    idx = reply.find("[维度]")
+    if idx < 0:
+        return dims, reply.strip()
 
+    rest = reply[idx + len("[维度]"):]
+    start = rest.find("{")
+    if start >= 0:
+        # 括号平衡匹配多行 JSON
+        depth, end = 0, -1
+        for i in range(start, len(rest)):
+            if rest[i] == "{": depth += 1
+            elif rest[i] == "}":
+                depth -= 1
+                if depth == 0: end = i + 1; break
+        if end > start:
+            try:
+                parsed = json.loads(rest[start:end])
+                for k in default_keys:
+                    if k in parsed:
+                        try: dims[k] = min(max(int(float(parsed[k])), 1), 10)
+                        except (ValueError, TypeError): pass
+                # 去掉 [维度] 及整段 JSON（含 [维度] 到 JSON 前的字符）
+                cut_end = idx + len("[维度]") + end
+                clean = reply[:idx] + reply[cut_end:]
+                return dims, clean.strip()
+            except json.JSONDecodeError: pass
+    # 回退：取第一行按逗号分隔
+    line = rest.split("\n")[0]
+    for part in re.split(r"[,，]", line):
+        kv = part.split(":", 1)
+        if len(kv) == 2:
+            key = kv[0].strip().strip('"')
+            if key in dims:
+                try: dims[key] = min(max(int(float(kv[1].strip())), 1), 10)
+                except (ValueError, TypeError): pass
+    clean = reply[:idx] + reply[idx + len("[维度]") + len(line):]
+    return dims, clean.strip()
 
 # ---------- 历史追踪（迭代2）----------
 def load_history():
@@ -215,6 +238,8 @@ input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 
 textarea{resize:vertical;min-height:130px}
 .inline-row{display:flex;gap:14px;align-items:flex-end}.inline-row>div{flex:1}
 .gap{height:16px}
+.resume-row{display:flex;gap:8px;align-items:flex-start}.resume-row textarea{flex:1}
+.upload-col{display:flex;flex-direction:column;align-items:center;gap:2px}
 .start-row{margin-top:18px;display:flex;justify-content:flex-end}
 .row-end{margin-top:18px;display:flex;gap:10px;justify-content:flex-end;align-items:center}
 .card-head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
@@ -294,7 +319,15 @@ textarea{resize:vertical;min-height:130px}
     <div><label>面试类型</label><select id="interviewType"><option value="biz">业务面 · 深挖项目</option><option value="hr">HR面 · 软素质</option><option value="boss">总监面 · 战略思维</option><option value="stress">压力面 · 高压追问</option></select></div>
   </div>
   <div class="gap"></div>
-  <label>粘贴简历</label><textarea id="resume" autocomplete="off" placeholder="把你的简历粘贴到这里，AI 会据此出题与诊断 ..."></textarea>
+  <label>简历</label>
+  <div class="resume-row">
+    <textarea id="resume" autocomplete="off" placeholder="粘贴简历，或点击右侧按钮上传 .txt / .md 文件…"></textarea>
+    <div class="upload-col">
+      <input type="file" id="resume-file" accept=".txt,.md" onchange="uploadResume()" style="display:none">
+      <button class="btn btn-outline btn-sm" onclick="document.getElementById('resume-file').click()" title="上传简历文件">📁</button>
+      <span id="resume-file-name" style="font-size:10px;color:var(--sub);margin-top:3px;display:none;word-break:break-all"></span>
+    </div>
+  </div>
   <div class="start-row"><button id="start-btn" class="btn btn-primary" onclick="startFlow()">诊断简历，开始面试 →</button></div>
 </div>
 
@@ -366,6 +399,18 @@ else{el.innerHTML=el.getAttribute('data-orig')||el.innerHTML;el.disabled=false}
 }
 function api(url,data){
 return fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(function(r){return r.json()});
+}
+function uploadResume(){
+  var f=$('resume-file').files[0];if(!f)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    $('resume').value=e.target.result;
+    var nm=$('resume-file-name');nm.textContent=f.name;nm.style.display='';
+  };
+  reader.onerror=function(){
+    alert('文件读取失败，请尝试粘贴文本或换 .txt 格式');
+  };
+  reader.readAsText(f,'UTF-8');
 }
 async function startFlow(){
 var p=$('position').value.trim(),r=$('resume').value.trim();
@@ -647,7 +692,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 inst = "（跳过此题）\n"
             elif action == "end":
                 conv["finished"] = True
-                conv["messages"].append({"role": "user", "content": "面试结束。请输出：\n1.整体评价\n2.优点\n3.改进方向\n4.练习建议\n\n最后附维度评分（1-10整数）：\n[维度] 逻辑结构:X, 表达沟通:X, 业务深度:X, 方法论:X, 应变能力:X"})
+                conv["messages"].append({"role": "user", "content": "面试结束。请输出：\n1.整体评价\n2.优点\n3.改进方向\n4.练习建议\n\n最后请严格按以下 JSON 格式输出五维评分（1-10整数），不要换行、不要多余解释：\n[维度] {\"逻辑结构\":X, \"表达沟通\":X, \"业务深度\":X, \"方法论\":X, \"应变能力\":X}"})
                 try:
                     summary = call_deepseek(conv["messages"])
                 except Exception as e:
@@ -665,7 +710,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             conv["round"] += 1
             if conv["round"] > 10:
                 conv["finished"] = True
-                conv["messages"].append({"role": "user", "content": "面试结束。请输出：\n1.整体评价\n2.优点\n3.改进方向\n4.练习建议\n\n最后附维度评分（1-10整数）：\n[维度] 逻辑结构:X, 表达沟通:X, 业务深度:X, 方法论:X, 应变能力:X"})
+                conv["messages"].append({"role": "user", "content": "面试结束。请输出：\n1.整体评价\n2.优点\n3.改进方向\n4.练习建议\n\n最后请严格按以下 JSON 格式输出五维评分（1-10整数），不要换行、不要多余解释：\n[维度] {\"逻辑结构\":X, \"表达沟通\":X, \"业务深度\":X, \"方法论\":X, \"应变能力\":X}"})
                 try:
                     summary = call_deepseek(conv["messages"])
                 except Exception as e:
