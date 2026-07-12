@@ -89,6 +89,25 @@ def parse_reply(reply):
     return score, disp, weak
 
 
+def parse_dimensions(reply):
+    """解析 [维度] 标记，返回 (维度字典, 干净文本)"""
+    dims = {}
+    dm = re.search(r"\[维度\]\s*([^\n\[]*)", reply)
+    if dm:
+        raw = dm.group(1)
+        for part in re.split(r"[,，]", raw):
+            kv = part.split(":", 1)
+            if len(kv) == 2:
+                key = kv[0].strip()
+                try:
+                    val = int(kv[1].strip())
+                    dims[key] = min(max(val, 1), 10)
+                except ValueError:
+                    pass
+    clean = re.sub(r"\[维度\][^\n\[]*", "", reply).strip()
+    return dims, clean
+
+
 # ---------- 历史追踪（迭代2）----------
 def load_history():
     try:
@@ -121,6 +140,7 @@ def finish_record(sid):
         "date": time.strftime("%Y-%m-%d %H:%M"),
         "rounds": conv["round"], "avg_score": avg,
         "weaknesses": seen, "summary": conv.get("summary", ""),
+        "dimensions": conv.get("dimensions", {}),
     }
     hist = load_history()
     with history_lock:
@@ -402,7 +422,7 @@ try{
 var d=await api('/action',{session_id:sessionId,action:action,answer:ans});
 removeThinking();
 if(d.error){addMsg('ai','[系统] '+d.error);}
-else if(d.finished){addMsg('ai',d.message);showSummary(d.message);$('input-area').classList.add('hidden')}
+else if(d.finished){addMsg('ai',d.message);showSummary(d.message,d.dimensions);$('input-area').classList.add('hidden')}
 else{addMsg('ai',d.message,d.weaknesses);$('round-info').textContent='第 '+d.round+' / 10 轮';updateProgress(d.round);}
 }catch(e){removeThinking();addMsg('ai','[系统] 网络出错: '+e.message)}
 isWaiting=0;setWaiting(false);if(action!=='end')$('answer').focus();
@@ -410,9 +430,80 @@ isWaiting=0;setWaiting(false);if(action!=='end')$('answer').focus();
 function setWaiting(on){var b=$('send-btn');if(b){b.disabled=on;b.innerHTML=on?'<span class="spinner"></span> 思考中…':'📤 发送'}}
 function showThinking(){if($('thinking'))return;var d=document.createElement('div');d.className='msg msg-ai';d.id='thinking';d.innerHTML='<div class="avatar ai">🎯</div><div class="msg-body"><div class="bubble"><span class="spinner"></span> 面试官正在思考…</div></div>';$('chat').appendChild(d);$('chat').scrollTop=$('chat').scrollHeight;}
 function removeThinking(){var t=$('thinking');if(t)t.remove();}
-function showSummary(text){
+function showSummary(text,dims){
 var c=$('summary-card');c.classList.remove('hidden');
-c.innerHTML='<div class="card-head"><span class="dot"></span><h3>面试总评</h3></div><div style="font-size:14px;white-space:pre-wrap;line-height:1.85">'+text+'</div><div style="margin-top:18px;display:flex;gap:10px"><button class="btn btn-primary" onclick="location.reload()">再来一次</button></div>';
+var radarHTML='';
+if(dims&&Object.keys(dims).length){
+  radarHTML='<div style="display:flex;justify-content:center;margin-bottom:20px"><canvas id="radar-canvas" width="320" height="300"></canvas></div>';
+}
+c.innerHTML='<div class="card-head"><span class="dot"></span><h3>面试总评</h3></div>'+radarHTML+'<div style="font-size:14px;white-space:pre-wrap;line-height:1.85">'+text+'</div><div style="margin-top:18px;display:flex;gap:10px"><button class="btn btn-primary" onclick="location.reload()">再来一次</button></div>';
+if(dims&&Object.keys(dims).length)drawRadar('radar-canvas',dims);
+window._lastDims=dims||{};
+}
+function drawRadar(canvasId,dims){
+var keys=['逻辑结构','表达沟通','业务深度','方法论','应变能力'];
+var n=keys.length,cv=document.getElementById(canvasId);if(!cv)return;
+var ctx=cv.getContext('2d'),w=cv.width,h=cv.height,cx=w/2,cy=h/2-5,r=110;
+var style=getComputedStyle(document.documentElement);
+var clBorder=style.getPropertyValue('--border').trim()||'#d1d5db';
+var clSub=style.getPropertyValue('--sub').trim()||'#9ca3af';
+var clText=style.getPropertyValue('--text').trim()||'#111827';
+var clAccent=style.getPropertyValue('--blue').trim()||'#2563eb';
+var vals=keys.map(function(k){return dims[k]||0;});
+ctx.clearRect(0,0,w,h);
+// 背景网格
+for(var lv=5;lv<=10;lv+=1){
+  var ratio=lv/10;
+  ctx.beginPath();
+  for(var i=0;i<n;i++){
+    var ang=-Math.PI/2+i*2*Math.PI/n;
+    var x=cx+Math.cos(ang)*r*ratio,y=cy+Math.sin(ang)*r*ratio;
+    if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+  }
+  ctx.closePath();
+  ctx.strokeStyle=clBorder;ctx.lineWidth=1;ctx.stroke();
+  if(lv%2===0){
+    ctx.fillStyle=clSub;ctx.font='10px -apple-system,sans-serif';
+    ctx.fillText(lv,cx+8,cy-r*ratio+12);
+  }
+}
+// 轴线
+var axisLen=r+18;
+for(var i=0;i<n;i++){
+  var ang=-Math.PI/2+i*2*Math.PI/n;
+  ctx.beginPath();ctx.moveTo(cx,cy);
+  ctx.lineTo(cx+Math.cos(ang)*r,cy+Math.sin(ang)*r);
+  ctx.strokeStyle=clBorder;ctx.lineWidth=1;ctx.stroke();
+  var lx=cx+Math.cos(ang)*axisLen,ly=cy+Math.sin(ang)*axisLen;
+  ctx.fillStyle=clText;ctx.font='12px -apple-system,sans-serif';
+  ctx.textAlign=i===0?'center':(i<2?'left':(i===3?'right':'center'));
+  ctx.fillText(keys[i],lx,ly);
+}
+// 数据填充
+ctx.beginPath();
+for(var i=0;i<n;i++){
+  var ang=-Math.PI/2+i*2*Math.PI/n;
+  var ratio2=vals[i]/10;
+  var x=cx+Math.cos(ang)*r*ratio2,y=cy+Math.sin(ang)*r*ratio2;
+  if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+}
+ctx.closePath();
+var grd=ctx.createRadialGradient(cx,cy,0,cx,cy,r);
+grd.addColorStop(0,clAccent+'40');
+grd.addColorStop(1,clAccent+'0D');
+ctx.fillStyle=grd;ctx.fill();
+ctx.strokeStyle=clAccent;ctx.lineWidth=2;ctx.stroke();
+// 得分点
+for(var i=0;i<n;i++){
+  var ang3=-Math.PI/2+i*2*Math.PI/n;
+  var ratio3=vals[i]/10;
+  var x=cx+Math.cos(ang3)*r*ratio3,y=cy+Math.sin(ang3)*r*ratio3;
+  ctx.beginPath();ctx.arc(x,y,4,0,2*Math.PI);
+  ctx.fillStyle=clAccent;ctx.fill();
+  ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.fillStyle=clText;ctx.font='bold 11px -apple-system,sans-serif';ctx.textAlign='center';
+  ctx.fillText(vals[i],x,y-14);
+}
 }
 async function showHistory(){
 try{
@@ -456,7 +547,7 @@ $('history-modal').classList.remove('hidden');
 }
 function hideHistory(){$('history-modal').classList.add('hidden')}
 function updateProgress(round){var f=$('round-progress-fill');if(f)f.style.width=Math.min(round,10)/10*100+'%';}
-function toggleTheme(){var b=document.body;var dark=b.dataset.theme==='dark';var next=dark?'light':'dark';b.dataset.theme=next;try{localStorage.setItem('iv-theme',next)}catch(e){}var btn=$('theme-toggle');if(btn)btn.textContent=next==='dark'?'☀️':'🌙';}
+function toggleTheme(){var b=document.body;var dark=b.dataset.theme==='dark';var next=dark?'light':'dark';b.dataset.theme=next;try{localStorage.setItem('iv-theme',next)}catch(e){}var btn=$('theme-toggle');if(btn)btn.textContent=next==='dark'?'☀️':'🌙';if(window._lastDims)drawRadar('radar-canvas',window._lastDims);}
 (function(){try{var t=localStorage.getItem('iv-theme');if(t){document.body.dataset.theme=t;var b=$('theme-toggle');if(b)b.textContent=t==='dark'?'☀️':'🌙';}}catch(e){}})();
 document.addEventListener('keydown',function(e){if(e.key==='Escape')hideHistory()})
 </script>
@@ -556,15 +647,17 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 inst = "（跳过此题）\n"
             elif action == "end":
                 conv["finished"] = True
-                conv["messages"].append({"role": "user", "content": "面试结束。总结：1.整体 2.优点 3.改进 4.练习方向"})
+                conv["messages"].append({"role": "user", "content": "面试结束。请输出：\n1.整体评价\n2.优点\n3.改进方向\n4.练习建议\n\n最后附维度评分（1-10整数）：\n[维度] 逻辑结构:X, 表达沟通:X, 业务深度:X, 方法论:X, 应变能力:X"})
                 try:
                     summary = call_deepseek(conv["messages"])
                 except Exception as e:
                     self.send_json({"finished": True, "message": "[系统] 总结生成失败：" + str(e)})
                     return
-                conv["summary"] = summary
+                dims, clean = parse_dimensions(summary)
+                conv["summary"] = clean
+                conv["dimensions"] = dims
                 finish_record(sid)
-                self.send_json({"finished": True, "message": summary})
+                self.send_json({"finished": True, "message": clean, "dimensions": dims})
                 return
             content = (inst + answer) if answer else inst
             if content.strip():
@@ -572,15 +665,17 @@ class Handler(http.server.BaseHTTPRequestHandler):
             conv["round"] += 1
             if conv["round"] > 10:
                 conv["finished"] = True
-                conv["messages"].append({"role": "user", "content": "面试结束。总结：1.整体 2.优点 3.改进 4.练习方向"})
+                conv["messages"].append({"role": "user", "content": "面试结束。请输出：\n1.整体评价\n2.优点\n3.改进方向\n4.练习建议\n\n最后附维度评分（1-10整数）：\n[维度] 逻辑结构:X, 表达沟通:X, 业务深度:X, 方法论:X, 应变能力:X"})
                 try:
                     summary = call_deepseek(conv["messages"])
                 except Exception as e:
                     self.send_json({"finished": True, "message": "[系统] 总结生成失败：" + str(e)})
                     return
-                conv["summary"] = summary
+                dims, clean = parse_dimensions(summary)
+                conv["summary"] = clean
+                conv["dimensions"] = dims
                 finish_record(sid)
-                self.send_json({"finished": True, "message": summary})
+                self.send_json({"finished": True, "message": clean, "dimensions": dims})
                 return
             try:
                 reply = call_deepseek(conv["messages"])
